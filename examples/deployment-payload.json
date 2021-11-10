@@ -1,0 +1,43 @@
+{
+    "FilterKeys": [
+        "example"
+    ],
+    "Index": 118,
+    "Key": "02b61f5a-0e56-c927-e48c-b6f091c3e808",
+    "Payload": {
+        "Deployment": {
+            "CreateIndex": 111,
+            "ID": "02b61f5a-0e56-c927-e48c-b6f091c3e808",
+            "IsMultiregion": false,
+            "JobCreateIndex": 110,
+            "JobID": "example",
+            "JobModifyIndex": 110,
+            "JobSpecModifyIndex": 110,
+            "JobVersion": 0,
+            "ModifyIndex": 118,
+            "Namespace": "default",
+            "Status": "successful",
+            "StatusDescription": "Deployment completed successfully",
+            "TaskGroups": {
+                "cache": {
+                    "AutoPromote": false,
+                    "AutoRevert": false,
+                    "DesiredCanaries": 0,
+                    "DesiredTotal": 1,
+                    "HealthyAllocs": 1,
+                    "PlacedAllocs": 1,
+                    "PlacedCanaries": null,
+                    "ProgressDeadline": 600000000000,
+                    "Promoted": false,
+                    "RequireProgressBy": "2021-11-08T20:16:36.691619318+05:30",
+                    "UnhealthyAllocs": 0
+                }
+            }
+        }
+    },
+    "Topic": "Deployment",
+    "Type": "PlanResult",
+    "path": "/",
+    "source_type": "http",
+    "timestamp": "2021-11-09T04:05:11.559987958Z"
+}

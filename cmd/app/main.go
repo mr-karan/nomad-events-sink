@@ -1,0 +1,45 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+)
+
+var (
+	// Version of the build. This is injected at build-time.
+	buildString = "unknown"
+)
+
+func main() {
+	// Create a new context which gets cancelled upon receiving `SIGINT`/`SIGTERM`.
+	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+
+	// Initialise and load the config.
+	ko, err := initConfig("config.sample.toml", "NOMAD_EVENTS_SINK_")
+	if err != nil {
+		fmt.Println("error initialising config", err)
+		os.Exit(1)
+	}
+
+	var (
+		log    = initLogger(ko)
+		sink   = initSink(ko, log)
+		stream = initStream(ctx, ko, log, sink)
+		opts   = initOpts(ko)
+	)
+
+	// Initialise a new instance of app.
+	app := App{
+		log:    log,
+		sink:   sink,
+		stream: stream,
+		opts:   opts,
+	}
+
+	// Start an instance of app.
+	app.log.WithField("version", buildString).Info("booting nomad events collector")
+	app.Start(ctx)
+}

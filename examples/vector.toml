@@ -1,0 +1,71 @@
+# Directory for Vector data storage:
+data_dir = "/var/lib/vector" # Make sure the user which runs vector has R/W access to this directory.
+
+# Vector's API for introspection
+[api]
+enabled = true
+address = "127.0.0.1:8686"
+
+# Ingest logs from HTTP server.
+[sources.nomad_events]
+type = "http"
+address = "0.0.0.0:1234" # required
+decoding.codec = "json"
+
+[transforms.route_logs]
+type = "route"
+inputs = ["nomad_events"]
+# Route condition.
+# NOTE: If none of the condition matches, the log is dropped.
+route."deployment" = 'contains!(.Topic,"Deployment")'
+route."node" = 'contains!(.Topic,"Node")'
+route."allocation" = 'contains!(.Topic,"Allocation")'
+route."job" = 'contains!(.Topic,"Job")'
+route."evaluation" = 'contains!(.Topic,"Evaluation")'
+
+[transforms.parse_deployment_events]
+type = "remap"
+inputs = ["route_logs.deployment"]
+source = '''
+# Parse the Deployment Event.
+
+# Prepare the full event payload with details that are needed.
+. = {
+    "timestamp": .timestamp,
+    "topic": .Topic,
+    "type": .Type,
+    "job_id": .Payload.Deployment.JobID,
+    "namespace": .Payload.Deployment.Namespace,
+    "status": .Payload.Deployment.Status,
+    "status_description": .Payload.Deployment.StatusDescription
+}
+'''
+
+# Output to Console
+[sinks.console]
+type = "console" # required
+inputs = ["parse_deployment_events"] # required
+target = "stdout" # optional, default
+encoding.codec = "json" # required
+
+# Output to Loki
+[sinks.loki]
+type = "loki"
+inputs = ["parse_deployment_events"]
+endpoint = "http://localhost:3100"
+encoding.codec = "json"
+encoding.timestamp_format = "rfc3339"
+healthcheck.enabled = true
+batch.max_bytes = 1049000 # 1MB
+batch.timeout_secs = 5
+buffer.max_size = 1049000000 #1GB
+buffer.type = "disk"
+buffer.when_full = "block"
+# Add labels to identify a log stream.
+labels.namespace = "{{ namespace }}"
+labels.topic = "{{ topic }}"
+labels.type = "{{ type }}"
+# Remove fields that have been converted to labels to avoid having them twice.
+remove_label_fields = true
+out_of_order_action="rewrite_timestamp"
+remove_timestamp=true
