@@ -48,7 +48,7 @@ $ ./nomad-events-sink.bin --config config.toml
 ### Docker
 
 ```
-docker pull ghcr.io/mr-karan/nomad-nomad-events-sink:latest
+docker pull ghcr.io/mr-karan/nomad-events-sink:latest
 ```
 
 ### Quick Start

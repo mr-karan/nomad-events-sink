@@ -38,8 +38,8 @@ dockers:
 
     # Templates of the Docker image names.
     image_templates:
-      - "ghcr.io/mr-karan/nomad-nomad-events-sink:{{ .Tag }}"
-      - "ghcr.io/mr-karan/nomad-nomad-events-sink:latest"
+      - "ghcr.io/mr-karan/nomad-events-sink:{{ .Tag }}"
+      - "ghcr.io/mr-karan/nomad-events-sink:latest"
 
     # Skips the docker push.
     # Could be useful if you also do draft releases.

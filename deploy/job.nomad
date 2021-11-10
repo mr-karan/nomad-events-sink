@@ -22,7 +22,7 @@ job "nomad-events-sink" {
       driver = "docker"
 
       config {
-        image = "ghcr.io/mr-karan/nomad-nomad-events-sink:latest"
+        image = "ghcr.io/mr-karan/nomad-events-sink:latest"
       }
 
       env {
