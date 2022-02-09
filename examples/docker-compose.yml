@@ -1,20 +1,34 @@
 version: "3"
 
 networks:
-  loki:
+  nomad-events-demo:
 
 services:
   loki:
-    image: grafana/loki:2.4.1
+    image: grafana/loki:latest
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
     networks:
-      - loki
+      - nomad-events-demo
 
   grafana:
     image: grafana/grafana:latest
+    depends_on:
+      - loki
     ports:
       - "3000:3000"
     networks:
+      - nomad-events-demo
+
+  vector:
+    image: timberio/vector:0.19.1-debian
+    depends_on:
       - loki
+    ports:
+      - "3333:3333"
+    networks:
+      - nomad-events-demo
+    volumes:
+      - ./vector.toml:/etc/vector/vector.toml:ro
+      - ./data:/var/lib/vector

@@ -19,3 +19,8 @@ fresh: build run
 .PHONY: lint
 lint:
 	docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v1.43.0 golangci-lint run -v
+
+.PHONY: dev-suite
+dev-suite:
+	vector -c examples/vector.toml
+	nomad agent -bind 0.0.0.0 -dev

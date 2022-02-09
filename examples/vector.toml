@@ -9,7 +9,7 @@ address = "127.0.0.1:8686"
 # Ingest logs from HTTP server.
 [sources.nomad_events]
 type = "http"
-address = "0.0.0.0:1234" # required
+address = "0.0.0.0:3333" # required
 decoding.codec = "json"
 
 [transforms.route_logs]
@@ -23,7 +23,64 @@ route."allocation" = 'contains!(.Topic,"Allocation")'
 route."job" = 'contains!(.Topic,"Job")'
 route."evaluation" = 'contains!(.Topic,"Evaluation")'
 
-[transforms.parse_deployment_events]
+[transforms.parse_events_node]
+type = "remap"
+inputs = ["route_logs.node"]
+source = '''
+# Parse the Node Event.
+
+# Prepare the full event payload with details that are needed.
+. = {
+    "timestamp": .timestamp,
+    "topic": .Topic,
+    "type": .Type,
+    "http_addr": .Payload.Node.HTTPAddr,
+    "name": .Payload.Node.Name,
+    "scheduling_eligibility": .Payload.Node.SchedulingEligibility,
+    "status": .Payload.Node.Status,
+    "message": .Payload.Node.Events[-1].Message,
+    "subsystem": .Payload.Node.Events[-1].Subsystem
+}
+'''
+
+[transforms.parse_events_eval]
+type = "remap"
+inputs = ["route_logs.evaluation"]
+source = '''
+# Parse the Evaluation Event.
+
+# Prepare the full event payload with details that are needed.
+. = {
+    "timestamp": .timestamp,
+    "topic": .Topic,
+    "type": .Type,
+    "job_id": .Payload.Evaluation.JobID,
+    "job_type": .Payload.Evaluation.Type,
+    "namespace": .Payload.Evaluation.Namespace,
+    "status": .Payload.Evaluation.Status
+}
+'''
+
+[transforms.parse_events_job]
+type = "remap"
+inputs = ["route_logs.job"]
+source = '''
+# Parse the Job Event.
+
+# Prepare the full event payload with details that are needed.
+. = {
+    "timestamp": .timestamp,
+    "topic": .Topic,
+    "type": .Type,
+    "job_id": .Payload.Job.ID,
+    "name": .Payload.Job.Name,
+    "job_type": .Payload.Job.Type,
+    "namespace": .Payload.Job.Namespace,
+    "status": .Payload.Job.Status
+}
+'''
+
+[transforms.parse_events_deployment]
 type = "remap"
 inputs = ["route_logs.deployment"]
 source = '''
@@ -41,31 +98,57 @@ source = '''
 }
 '''
 
-# Output to Console
-[sinks.console]
-type = "console" # required
-inputs = ["parse_deployment_events"] # required
-target = "stdout" # optional, default
-encoding.codec = "json" # required
+[transforms.parse_events_alloc]
+type = "remap"
+inputs = ["route_logs.allocation"]
+source = '''
+# Parse the Allocation Event.
+
+# Prepare the full event payload with details that are needed.
+. = {
+    "timestamp": .timestamp,
+    "topic": .Topic,
+    "type": .Type,
+    "client_description": .Payload.Allocation.ClientDescription,
+    "client_status": .Payload.Allocation.ClientStatus,
+    "desired_status": .Payload.Allocation.DesiredStatus,
+    "job_id": .Payload.Allocation.JobID,
+    "name": .Payload.Allocation.Name,
+    "namespace": .Payload.Allocation.Namespace,
+    "node_name": .Payload.Allocation.NodeName,
+    "task_group": .Payload.Allocation.TaskGroup
+}
+'''
+
+# # Output to Console
+# [sinks.console]
+# type = "console" # required
+# inputs = ["parse_events_*"] # required
+# target = "stdout" # optional, default
+# encoding.codec = "json" # required
+
+# [sinks.file]
+# type = "file"
+# inputs = [ "nomad_events" ]
+# compression = "none"
+# path = "/var/lib/vector/nomad_events.log"
+# encoding = "ndjson"
 
 # Output to Loki
 [sinks.loki]
 type = "loki"
-inputs = ["parse_deployment_events"]
-endpoint = "http://localhost:3100"
+inputs = ["parse_events_*"]
+endpoint = "http://loki:3100"
 encoding.codec = "json"
 encoding.timestamp_format = "rfc3339"
 healthcheck.enabled = true
-batch.max_bytes = 1049000 # 1MB
-batch.timeout_secs = 5
-buffer.max_size = 1049000000 #1GB
-buffer.type = "disk"
-buffer.when_full = "block"
+
 # Add labels to identify a log stream.
 labels.namespace = "{{ namespace }}"
 labels.topic = "{{ topic }}"
 labels.type = "{{ type }}"
+
 # Remove fields that have been converted to labels to avoid having them twice.
-remove_label_fields = true
+remove_label_fields = false
 out_of_order_action="rewrite_timestamp"
 remove_timestamp=true

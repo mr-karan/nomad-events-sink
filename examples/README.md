@@ -6,13 +6,7 @@
 $ nomad agent -bind 0.0.0.0 -dev
 ```
 
-## Setup Vector
-
-```
-$ vector -c ./examples/vector.toml
-```
-
-## Setup Loki/Grafana
+## Setup Loki/Grafana/Vector
 
 ```
 docker-compose up
