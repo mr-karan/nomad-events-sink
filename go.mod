@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/hashicorp/nomad/api v0.0.0-20211103234928-04cab9dbecd3
 	github.com/knadh/koanf v1.3.2
+	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/pflag v1.0.5
 )

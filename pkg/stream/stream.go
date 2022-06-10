@@ -8,8 +8,13 @@ import (
 	"time"
 
 	"github.com/hashicorp/nomad/api"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
+
+type Meta struct {
+	NodeID string
+}
 
 type CallbackFunc func(api.Event)
 
@@ -24,7 +29,7 @@ type Stream struct {
 }
 
 // New initialises a Stream object.
-func New(log *logrus.Logger, callback CallbackFunc, dir string, commitInterval time.Duration) (*Stream, error) {
+func New(log *logrus.Logger, dir string, commitInterval time.Duration) (*Stream, error) {
 	// Initialise a Nomad API client with default config.
 	client, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
@@ -34,11 +39,15 @@ func New(log *logrus.Logger, callback CallbackFunc, dir string, commitInterval t
 	return &Stream{
 		client:         client,
 		log:            log,
-		callback:       callback,
 		dataDir:        dir,
 		eventIndex:     initEventIndex(),
 		commitInterval: commitInterval,
 	}, nil
+}
+
+// SetCB is used to set a callback for processing events.
+func (s *Stream) SetCB(cb CallbackFunc) {
+	s.callback = cb
 }
 
 // Subscribe establishes a subscription to Nomad's
@@ -95,6 +104,12 @@ func (s *Stream) initStreamChannel(ctx context.Context, topic string) (<-chan *a
 	index := s.eventIndex[topic]
 	s.RUnlock()
 
+	// Increment the index if it's non 0.
+	// We do this to avoid processing the same index that was committed already.
+	// if index > 0 {
+	// 	index++
+	// }
+
 	s.log.WithFields(logrus.Fields{
 		"topic": api.Topic(topic),
 		"index": index,
@@ -111,9 +126,15 @@ func (s *Stream) initStreamChannel(ctx context.Context, topic string) (<-chan *a
 
 // handleEvents reads events from the events channel and adds to sink for further processing.
 func (s *Stream) handleEvents(ctx context.Context, eventCh <-chan *api.Events) error {
+	// Check callback is not nill.
 	for {
 		select {
 		case <-ctx.Done():
+			s.log.Info("cancellation signal received; comitting index file")
+			err := s.commitIndex(getIndexPath(s.dataDir))
+			if err != nil {
+				s.log.WithError(err).Error("error committing index file")
+			}
 			return nil
 		case event := <-eventCh:
 			if event.Err != nil {
@@ -128,7 +149,9 @@ func (s *Stream) handleEvents(ctx context.Context, eventCh <-chan *api.Events) e
 
 			// Call the callback func.
 			for _, e := range event.Events {
-				s.callback(e)
+				if s.callback != nil {
+					s.callback(e)
+				}
 			}
 
 			// Write the latest index to the map.
@@ -138,4 +161,13 @@ func (s *Stream) handleEvents(ctx context.Context, eventCh <-chan *api.Events) e
 			s.Unlock()
 		}
 	}
+}
+
+// Returns the NodeID of the underlying Nomad client it's running on.
+func (s *Stream) NodeID() (string, error) {
+	self, err := s.client.Agent().Self()
+	if err != nil {
+		return "", errors.WithMessage(err, "unable to fetch self node")
+	}
+	return self.Stats["client"]["node_id"], nil
 }

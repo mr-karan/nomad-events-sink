@@ -27,13 +27,12 @@ func main() {
 	}
 
 	var (
-		log  = initLogger(ko)
-		sink = initSink(ko, log)
-		cb   = func(e api.Event) {
+		log    = initLogger(ko)
+		sink   = initSink(ko, log)
+		stream = initStream(ctx, ko, log, func(e api.Event) {
 			sink.Add(e)
-		}
-		stream = initStream(ctx, ko, log, cb)
-		opts   = initOpts(ko)
+		})
+		opts = initOpts(ko)
 	)
 
 	// Initialise a new instance of app.

@@ -103,12 +103,12 @@ func (s *Stream) commitPeriodically(ctx context.Context, commitInterval time.Dur
 	s.log.WithField("frequency", commitInterval).Info("starting background worker to commit index")
 	for range commitTicker {
 		select {
-		case <-ctx.Done():
-			err := s.commitIndex(getIndexPath(s.dataDir))
-			if err != nil {
-				s.log.WithError(err).Error("error committing index file")
-			}
-			return
+		// case <-ctx.Done():
+		// 	err := s.commitIndex(getIndexPath(s.dataDir))
+		// 	if err != nil {
+		// 		s.log.WithError(err).Error("error committing index file")
+		// 	}
+		// 	return
 		case <-commitTicker:
 			err := s.commitIndex(getIndexPath(s.dataDir))
 			if err != nil {
