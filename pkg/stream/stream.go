@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/nomad/api"
-	sink "github.com/mr-karan/nomad-events-sink/internal/sinks"
 	"github.com/sirupsen/logrus"
 )
+
+type CallbackFunc func(api.Event)
 
 type Stream struct {
 	sync.RWMutex
@@ -19,11 +20,11 @@ type Stream struct {
 	eventIndex     map[string]uint64
 	dataDir        string
 	commitInterval time.Duration
-	sink           sink.Sink
+	callback       CallbackFunc
 }
 
 // New initialises a Stream object.
-func New(log *logrus.Logger, sink sink.Sink, dir string, commitInterval time.Duration) (*Stream, error) {
+func New(log *logrus.Logger, callback CallbackFunc, dir string, commitInterval time.Duration) (*Stream, error) {
 	// Initialise a Nomad API client with default config.
 	client, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
@@ -33,7 +34,7 @@ func New(log *logrus.Logger, sink sink.Sink, dir string, commitInterval time.Dur
 	return &Stream{
 		client:         client,
 		log:            log,
-		sink:           sink,
+		callback:       callback,
 		dataDir:        dir,
 		eventIndex:     initEventIndex(),
 		commitInterval: commitInterval,
@@ -125,9 +126,9 @@ func (s *Stream) handleEvents(ctx context.Context, eventCh <-chan *api.Events) e
 				continue
 			}
 
-			// Add to sink channel.
+			// Call the callback func.
 			for _, e := range event.Events {
-				s.sink.Add(e)
+				s.callback(e)
 			}
 
 			// Write the latest index to the map.

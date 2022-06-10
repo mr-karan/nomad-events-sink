@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/hashicorp/nomad/api"
 )
 
 var (
@@ -25,9 +27,12 @@ func main() {
 	}
 
 	var (
-		log    = initLogger(ko)
-		sink   = initSink(ko, log)
-		stream = initStream(ctx, ko, log, sink)
+		log  = initLogger(ko)
+		sink = initSink(ko, log)
+		cb   = func(e api.Event) {
+			sink.Add(e)
+		}
+		stream = initStream(ctx, ko, log, cb)
 		opts   = initOpts(ko)
 	)
 

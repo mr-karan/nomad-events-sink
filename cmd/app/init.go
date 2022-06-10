@@ -12,7 +12,7 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	sink "github.com/mr-karan/nomad-events-sink/internal/sinks"
 	"github.com/mr-karan/nomad-events-sink/internal/sinks/provider"
-	"github.com/mr-karan/nomad-events-sink/internal/stream"
+	"github.com/mr-karan/nomad-events-sink/pkg/stream"
 	"github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 )
@@ -103,9 +103,9 @@ func initSink(ko *koanf.Koanf, log *logrus.Logger) sink.Sink {
 	return sink
 }
 
-func initStream(ctx context.Context, ko *koanf.Koanf, log *logrus.Logger, sink sink.Sink) *stream.Stream {
+func initStream(ctx context.Context, ko *koanf.Koanf, log *logrus.Logger, cb stream.CallbackFunc) *stream.Stream {
 	s, err := stream.New(log,
-		sink,
+		cb,
 		ko.String("app.data_dir"),
 		ko.Duration("app.commit_index_interval"),
 	)

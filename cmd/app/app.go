@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	sink "github.com/mr-karan/nomad-events-sink/internal/sinks"
-	"github.com/mr-karan/nomad-events-sink/internal/stream"
+	"github.com/mr-karan/nomad-events-sink/pkg/stream"
 	"github.com/sirupsen/logrus"
 )
 
