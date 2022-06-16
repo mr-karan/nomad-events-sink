@@ -104,16 +104,16 @@ func initSink(ko *koanf.Koanf, log *logrus.Logger) sink.Sink {
 }
 
 func initStream(ctx context.Context, ko *koanf.Koanf, log *logrus.Logger, cb stream.CallbackFunc) *stream.Stream {
-	s, err := stream.New(log,
+	s, err := stream.New(
 		ko.String("app.data_dir"),
 		ko.Duration("app.commit_index_interval"),
+		cb,
+		true,
 	)
 	if err != nil {
 		log.WithError(err).Fatal("error initialising stream")
 	}
 
-	// Set callback for processing events.
-	s.SetCB(cb)
 	return s
 }
 

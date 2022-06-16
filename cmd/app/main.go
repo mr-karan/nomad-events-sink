@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/hashicorp/nomad/api"
+	"github.com/mr-karan/nomad-events-sink/pkg/stream"
 )
 
 var (
@@ -29,7 +30,7 @@ func main() {
 	var (
 		log    = initLogger(ko)
 		sink   = initSink(ko, log)
-		stream = initStream(ctx, ko, log, func(e api.Event) {
+		stream = initStream(ctx, ko, log, func(e api.Event, meta stream.Meta) {
 			sink.Add(e)
 		})
 		opts = initOpts(ko)
