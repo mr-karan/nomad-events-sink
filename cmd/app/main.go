@@ -6,6 +6,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/hashicorp/nomad/api"
+	"github.com/mr-karan/nomad-events-sink/pkg/stream"
 )
 
 var (
@@ -27,8 +30,10 @@ func main() {
 	var (
 		log    = initLogger(ko)
 		sink   = initSink(ko, log)
-		stream = initStream(ctx, ko, log, sink)
-		opts   = initOpts(ko)
+		stream = initStream(ctx, ko, log, func(e api.Event, meta stream.Meta) {
+			sink.Add(e)
+		})
+		opts = initOpts(ko)
 	)
 
 	// Initialise a new instance of app.

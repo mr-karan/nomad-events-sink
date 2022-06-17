@@ -1,6 +1,6 @@
 module github.com/mr-karan/nomad-events-sink
 
-go 1.17
+go 1.18
 
 require (
 	github.com/hashicorp/nomad/api v0.0.0-20211103234928-04cab9dbecd3
