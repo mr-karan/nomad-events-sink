@@ -10,21 +10,26 @@ import (
 	"github.com/hashicorp/nomad/api"
 )
 
-type Meta struct {
-	NodeID string
-}
-
-type CallbackFunc func(api.Event, Meta)
-
+// Stream is a wrapper to interact with Nomad API.
 type Stream struct {
 	sync.RWMutex
 	log            *logger
-	client         *api.Client
 	eventIndex     map[string]uint64
 	dataDir        string
 	commitInterval time.Duration
 	callback       CallbackFunc
+
+	Client *api.Client
 }
+
+// Meta gives some extra metadata about the node/event that is sent with the callback function.
+type Meta struct {
+	NodeID string
+}
+
+// Callback to call when an event is received. The callback function needs to be defined when registering
+// a new Stream object.
+type CallbackFunc func(api.Event, Meta)
 
 // New initialises a Stream object.
 func New(dir string, commitInterval time.Duration, cb CallbackFunc, verbose bool) (*Stream, error) {
@@ -41,7 +46,7 @@ func New(dir string, commitInterval time.Duration, cb CallbackFunc, verbose bool
 
 	return &Stream{
 		log:            initLogger(verbose),
-		client:         client,
+		Client:         client,
 		dataDir:        dir,
 		eventIndex:     initEventIndex(),
 		commitInterval: commitInterval,
@@ -105,7 +110,7 @@ func (s *Stream) initStreamChannel(ctx context.Context, topic string) (<-chan *a
 
 	s.log.debugf("subscribing to stream on topic %s from index %d", api.Topic(topic), index)
 
-	events := s.client.EventStream()
+	events := s.Client.EventStream()
 	eventCh, err := events.Stream(ctx, topics, index, &api.QueryOptions{})
 	if err != nil {
 		s.log.errorf("error initialising stream client: %v", err)
@@ -116,7 +121,7 @@ func (s *Stream) initStreamChannel(ctx context.Context, topic string) (<-chan *a
 
 // handleEvents reads events from the events channel and adds to sink for further processing.
 func (s *Stream) handleEvents(ctx context.Context, eventCh <-chan *api.Events) error {
-	nodeID, err := s.nodeID()
+	nodeID, err := s.NodeID()
 	if err != nil {
 		return err
 	}
@@ -160,8 +165,8 @@ func (s *Stream) handleEvents(ctx context.Context, eventCh <-chan *api.Events) e
 }
 
 // nodeID Returns the NodeID of the underlying Nomad client it's running on.
-func (s *Stream) nodeID() (string, error) {
-	self, err := s.client.Agent().Self()
+func (s *Stream) NodeID() (string, error) {
+	self, err := s.Client.Agent().Self()
 	if err != nil {
 		return "", fmt.Errorf("unable to fetch node: %v", err)
 	}
