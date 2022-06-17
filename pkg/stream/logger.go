@@ -27,8 +27,7 @@ func initLogger(verbose bool) *logger {
 	}
 	if verbose {
 		l.debugf = logfn("DEBUG")
-	} else {
-		l.errorf = logfn("ERROR")
 	}
+	l.errorf = logfn("ERROR")
 	return l
 }
