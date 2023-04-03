@@ -6,7 +6,7 @@ import (
 
 	sink "github.com/mr-karan/nomad-events-sink/internal/sinks"
 	"github.com/mr-karan/nomad-events-sink/pkg/stream"
-	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
 type Opts struct {
@@ -17,7 +17,7 @@ type Opts struct {
 // App is the global container that holds
 // objects of various routines that run on boot.
 type App struct {
-	log    *logrus.Logger
+	log    *slog.Logger
 	stream *stream.Stream
 	sink   sink.Sink
 	opts   Opts
@@ -40,7 +40,7 @@ func (app *App) Start(ctx context.Context) {
 	// from last event which is processed.
 	err := app.stream.InitIndex(ctx)
 	if err != nil {
-		app.log.WithError(err).Fatal("error initialising index store")
+		app.log.Error("error initialising index store", "error", err)
 	}
 
 	for _, t := range app.opts.topics {
@@ -50,7 +50,7 @@ func (app *App) Start(ctx context.Context) {
 			defer wg.Done()
 			// Subscribe to events.
 			if err := app.stream.Subscribe(ctx, topic, app.opts.maxReconnectAttempts); err != nil {
-				app.log.WithField("topic", topic).WithError(err).Fatal("error subscribing to events")
+				app.log.Error("error subscribing to events", "error", err, "topic", topic)
 			}
 		}()
 	}

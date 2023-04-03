@@ -13,21 +13,21 @@ import (
 	sink "github.com/mr-karan/nomad-events-sink/internal/sinks"
 	"github.com/mr-karan/nomad-events-sink/internal/sinks/provider"
 	"github.com/mr-karan/nomad-events-sink/pkg/stream"
-	"github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
+	"golang.org/x/exp/slog"
 )
 
-// initLogger initializes logger.
-func initLogger(ko *koanf.Koanf) *logrus.Logger {
-	logger := logrus.New()
-	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:          true,
-		DisableLevelTruncation: true,
-	})
-	if ko.String("app.log") == "debug" {
-		logger.SetLevel(logrus.DebugLevel)
+// initLogger initialies a logger.
+func initLogger(lvl string) *slog.Logger {
+	opts := slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelInfo,
 	}
-	return logger
+	if lvl == "debug" {
+		opts.Level = slog.LevelDebug
+	}
+
+	return slog.New(opts.NewTextHandler(os.Stdout))
 }
 
 // initConfig loads config to `ko`
@@ -74,7 +74,7 @@ func initConfig(cfgDefault string, envPrefix string) (*koanf.Koanf, error) {
 	return ko, nil
 }
 
-func initSink(ko *koanf.Koanf, log *logrus.Logger) sink.Sink {
+func initSink(ko *koanf.Koanf, log *slog.Logger) sink.Sink {
 	// Initialise HTTP Provider.
 	http, err := provider.NewHTTP(
 		provider.HTTPOpts{
@@ -87,7 +87,8 @@ func initSink(ko *koanf.Koanf, log *logrus.Logger) sink.Sink {
 			HealthCheckStatus:  ko.Int("sinks.http.healthcheck.status"),
 		})
 	if err != nil {
-		log.WithError(err).Fatal("error initialising http sink provider")
+		log.Error("error initialising http sink provider", "error", err)
+		exit()
 	}
 
 	sink := sink.New([]provider.Provider{http}, sink.Opts{
@@ -98,20 +99,22 @@ func initSink(ko *koanf.Koanf, log *logrus.Logger) sink.Sink {
 		Log:              log,
 	})
 	if err != nil {
-		log.WithError(err).Fatal("error initialising sink")
+		log.Error("error initialising sink", "error", err)
+		exit()
 	}
 	return sink
 }
 
-func initStream(ctx context.Context, ko *koanf.Koanf, log *logrus.Logger, cb stream.CallbackFunc) *stream.Stream {
+func initStream(ctx context.Context, ko *koanf.Koanf, log *slog.Logger, cb stream.CallbackFunc) *stream.Stream {
 	s, err := stream.New(
 		ko.String("app.data_dir"),
 		ko.Duration("app.commit_index_interval"),
 		cb,
-		true,
+		log,
 	)
 	if err != nil {
-		log.WithError(err).Fatal("error initialising stream")
+		log.Error("error initialising stream", "error", err)
+		exit()
 	}
 
 	return s

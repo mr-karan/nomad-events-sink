@@ -1,7 +1,7 @@
 [app]
 log = "debug" # `debug` for verbose logs. `info` otherwise.
 data_dir = "./data/events" # Directory to store `index.json` file which is used to set index offset when listening for events.
-commit_index_interval = "30s" # Interval at which `index.json` gets stored in `data_dir`.
+commit_index_interval = "5s" # Interval at which `index.json` gets stored in `data_dir`.
 
 [stream]
 topics = ["Deployment", "Allocation", "Evaluation", "Job", "Node"] # Topics to subscribe events for.
@@ -18,7 +18,6 @@ events_count = 5 # If a batch has more events than `events_counts`, it is flushe
 root_url = "http://localhost:3333" # HTTP server URL to `POST` events data to.
 timeout = "7s" # Timeout for the ingestion request.
 max_idle_conns = 100 # Number of keep-alive connections to keep in pool.
-
 [sinks.http.healthcheck]
 enabled = false # Abort if the upstream is unhealthy. This check is performed only during start of program.
 url = "http://localhost:3333" # Ping endpoint for the HTTP provider.

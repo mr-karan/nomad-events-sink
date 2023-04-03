@@ -7,13 +7,13 @@ import (
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/mr-karan/nomad-events-sink/internal/sinks/provider"
-	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
 // Sink represents the configuration to process events
 // with various upstream providers.
 type Sink struct {
-	log      *logrus.Logger
+	log      *slog.Logger
 	finished bool
 	workers  []Worker
 	Opts     Opts
@@ -21,7 +21,7 @@ type Sink struct {
 }
 
 type Opts struct {
-	Log              *logrus.Logger
+	Log              *slog.Logger
 	BatchWorkers     int
 	BatchQueueSize   int
 	BatchIdleTimeout time.Duration
@@ -68,7 +68,7 @@ func New(provs []provider.Provider, opt Opts) Sink {
 func (s *Sink) Run(ctx context.Context) {
 	wg := &sync.WaitGroup{}
 
-	s.log.WithField("workers", s.Opts.BatchWorkers).Info("starting to consume events from the events queue")
+	s.log.Info("starting to consume events from the events queue", "workers", s.Opts.BatchWorkers)
 	for i := 0; i < s.Opts.BatchWorkers; i++ {
 		wg.Add(1)
 		go func() {

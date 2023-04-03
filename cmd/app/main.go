@@ -14,6 +14,7 @@ import (
 var (
 	// Version of the build. This is injected at build-time.
 	buildString = "unknown"
+	exit        = func() { os.Exit(1) }
 )
 
 func main() {
@@ -28,7 +29,7 @@ func main() {
 	}
 
 	var (
-		log    = initLogger(ko)
+		log    = initLogger(ko.String("app.log"))
 		sink   = initSink(ko, log)
 		stream = initStream(ctx, ko, log, func(e api.Event, meta stream.Meta) {
 			sink.Add(e)
@@ -45,6 +46,6 @@ func main() {
 	}
 
 	// Start an instance of app.
-	app.log.WithField("version", buildString).Info("booting nomad events collector")
+	app.log.Info("booting nomad events collector", "version", buildString)
 	app.Start(ctx)
 }
