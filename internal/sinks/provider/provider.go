@@ -5,6 +5,6 @@ type Provider interface {
 	Name() string
 	// Push pushes a batch of event to upstream. The implementation varies across providers.
 	Push([]byte) error
-	// Ping implements a healthcheck.
-	Ping(url string, status int) error
+	// HealthCheck implements a healthcheck.
+	HealthCheck() error
 }
