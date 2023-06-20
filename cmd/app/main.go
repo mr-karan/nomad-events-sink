@@ -21,7 +21,7 @@ func main() {
 	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 
 	// Initialise and load the config.
-	ko, err := initConfig("config.sample.toml", "NOMAD_EVENTS_SINK_")
+	ko, err := initConfig("config.toml", "NOMAD_EVENTS_SINK_")
 	if err != nil {
 		fmt.Println("error initialising config", err)
 		os.Exit(1)
