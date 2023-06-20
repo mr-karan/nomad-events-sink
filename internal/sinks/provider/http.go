@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/knadh/koanf"
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,6 +26,17 @@ type HTTPOpts struct {
 	HealthCheckEnabled bool
 	HealthcheckURL     string
 	HealthCheckStatus  int
+}
+
+func ParseHTTPOpts(ko *koanf.Koanf) HTTPOpts {
+	return HTTPOpts{
+		RootURL:            ko.String("root_url"),
+		Timeout:            ko.Duration("timeout"),
+		MaxConnections:     ko.Int("max_idle_conns"),
+		HealthCheckEnabled: ko.Bool("healthcheck.enabled"),
+		HealthcheckURL:     ko.String("healthcheck.url"),
+		HealthCheckStatus:  ko.Int("healthcheck.status"),
+	}
 }
 
 // NewHTTP initializes a HTTP notification dispatcher object.

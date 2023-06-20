@@ -8,18 +8,17 @@ topics = ["Deployment", "Allocation", "Evaluation", "Job", "Node"] # Topics to s
 max_reconnect_attempts = 5 # Maximum reconnection attempts with Nomad Events API. After this limit is breached, program exits.
 
 [sinks]
-[sinks.batch]
 workers = 10 # Number of background workers to process events.
 queue_size = 100 # Max number of events each sink channel can store.
 idle_timeout = "5s" # If a batch is in memory for more than `idle_timeout` duration, it is flushed to providers.
 events_count = 5 # If a batch has more events than `events_counts`, it is flushed to providers.
 
-[sinks.http]
+[sinks.http.default]
 root_url = "http://localhost:3333" # HTTP server URL to `POST` events data to.
 timeout = "7s" # Timeout for the ingestion request.
 max_idle_conns = 100 # Number of keep-alive connections to keep in pool.
 
-[sinks.http.healthcheck]
+[sinks.http.default.healthcheck]
 enabled = false # Abort if the upstream is unhealthy. This check is performed only during start of program.
 url = "http://localhost:3333" # Ping endpoint for the HTTP provider.
 status = 405 # Status code to mark as healthy.
