@@ -84,7 +84,7 @@ func initProviders(ko *koanf.Koanf, log *logrus.Logger) (providers []provider.Pr
 			log.Warning("only a single sink provider is supported with legacy configuration")
 			httpConf := ko.Cut("http")
 
-			options := provider.ParseHTTPOpts(httpConf)
+			options := provider.ParseHTTPOpts("legacy", httpConf)
 			options.Log = log
 
 			var http *provider.HTTPManager
@@ -104,7 +104,7 @@ func initProviders(ko *koanf.Koanf, log *logrus.Logger) (providers []provider.Pr
 			log.Debugf("initializing http provider %s", httpProvider)
 			httpConf := ko.Cut("http." + httpProvider)
 
-			options := provider.ParseHTTPOpts(httpConf)
+			options := provider.ParseHTTPOpts(httpProvider, httpConf)
 			options.Log = log
 
 			var http *provider.HTTPManager
