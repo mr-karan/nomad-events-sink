@@ -14,6 +14,9 @@ type HTTPManager struct {
 	client  http.Client
 	rootURL string
 	log     *logrus.Logger
+
+	healthCheckURL    string
+	healthCheckStatus int
 }
 
 type HTTPOpts struct {
@@ -54,10 +57,11 @@ func NewHTTP(opts HTTPOpts) (*HTTPManager, error) {
 		log:     opts.Log,
 	}
 
-	// Ping upstream if healthcheck is enabled.
+	// HeathlCheck upstream if healthcheck is enabled.
 	if opts.HealthCheckEnabled {
-		httpMgr.log.WithField("url", opts.HealthcheckURL).Info("attempting to ping provider")
-		return httpMgr, httpMgr.Ping(opts.HealthcheckURL, opts.HealthCheckStatus)
+		httpMgr.healthCheckURL = opts.HealthcheckURL
+		httpMgr.healthCheckStatus = opts.HealthCheckStatus
+		return httpMgr, httpMgr.HealthCheck()
 	}
 
 	return httpMgr, nil
@@ -91,14 +95,20 @@ func (m *HTTPManager) Name() string {
 	return "http"
 }
 
-// Ping does a simple HTTP GET request to the
-func (m *HTTPManager) Ping(url string, status int) error {
+// HealthCheck does a simple HTTP GET request to the
+func (m HTTPManager) HealthCheck() error {
+	url, status := m.healthCheckURL, m.healthCheckStatus
+
+	m.log.WithField("provider", m.Name()).WithField("url", url).Info("attempting to check provider health")
+
 	resp, err := m.client.Get(url)
 	if err != nil {
 		return err
 	}
+
 	if resp.StatusCode != status {
 		return fmt.Errorf("status mismatch; expected %d got %d - %s", status, resp.StatusCode, resp.Status)
 	}
+
 	return nil
 }
