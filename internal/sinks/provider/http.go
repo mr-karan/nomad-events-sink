@@ -2,10 +2,12 @@ package provider
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/sirupsen/logrus"
 )
 
@@ -61,6 +63,15 @@ func NewHTTP(opts HTTPOpts) (*HTTPManager, error) {
 	}
 
 	return httpMgr, nil
+}
+
+// Prepare takes batches of events and returns JSON encoding of the same.
+func (m *HTTPManager) Prepare(events []api.Event) ([]byte, error) {
+	data, err := json.Marshal(events)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // Push sends out events to an HTTP Endpoint.
