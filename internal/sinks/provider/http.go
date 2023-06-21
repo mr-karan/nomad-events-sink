@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/knadh/koanf"
 	"github.com/sirupsen/logrus"
 )
 
 // HTTPManager represents the various methods for interacting with Pigeon.
 type HTTPManager struct {
+	name    string
 	client  http.Client
 	rootURL string
 	log     *logrus.Logger
@@ -18,6 +20,7 @@ type HTTPManager struct {
 
 type HTTPOpts struct {
 	Log            *logrus.Logger
+	Name           string
 	RootURL        string
 	Timeout        time.Duration
 	MaxConnections int
@@ -25,6 +28,18 @@ type HTTPOpts struct {
 	HealthCheckEnabled bool
 	HealthcheckURL     string
 	HealthCheckStatus  int
+}
+
+func ParseHTTPOpts(name string, ko *koanf.Koanf) HTTPOpts {
+	return HTTPOpts{
+		Name:               name,
+		RootURL:            ko.String("root_url"),
+		Timeout:            ko.Duration("timeout"),
+		MaxConnections:     ko.Int("max_idle_conns"),
+		HealthCheckEnabled: ko.Bool("healthcheck.enabled"),
+		HealthcheckURL:     ko.String("healthcheck.url"),
+		HealthCheckStatus:  ko.Int("healthcheck.status"),
+	}
 }
 
 // NewHTTP initializes a HTTP notification dispatcher object.
@@ -49,6 +64,7 @@ func NewHTTP(opts HTTPOpts) (*HTTPManager, error) {
 	}
 
 	httpMgr := &HTTPManager{
+		name:    opts.Name,
 		client:  client,
 		rootURL: opts.RootURL,
 		log:     opts.Log,
@@ -87,8 +103,8 @@ func (m *HTTPManager) Push(data []byte) error {
 }
 
 // Name returns the notification provider name.
-func (m *HTTPManager) Name() string {
-	return "http"
+func (m HTTPManager) Name() string {
+	return "http." + m.name
 }
 
 // Ping does a simple HTTP GET request to the

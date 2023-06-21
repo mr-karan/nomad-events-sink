@@ -74,27 +74,70 @@ func initConfig(cfgDefault string, envPrefix string) (*koanf.Koanf, error) {
 	return ko, nil
 }
 
-func initSink(ko *koanf.Koanf, log *logrus.Logger) sink.Sink {
-	// Initialise HTTP Provider.
-	http, err := provider.NewHTTP(
-		provider.HTTPOpts{
-			Log:                log,
-			RootURL:            ko.String("sinks.http.root_url"),
-			Timeout:            ko.Duration("sinks.http.timeout"),
-			MaxConnections:     ko.Int("sinks.http.max_idle_conns"),
-			HealthCheckEnabled: ko.Bool("sinks.http.healthcheck.enabled"),
-			HealthcheckURL:     ko.String("sinks.http.healthcheck.url"),
-			HealthCheckStatus:  ko.Int("sinks.http.healthcheck.status"),
-		})
-	if err != nil {
-		log.WithError(err).Fatal("error initialising http sink provider")
+func initProviders(ko *koanf.Koanf, log *logrus.Logger) (providers []provider.Provider, err error) {
+	// Initialise HTTP Providers.
+	if ko.Exists("http") {
+		// Check for legacy sinks.http.root_url key
+		if ko.Exists("http.root_url") {
+			// Fallback to legacy single provider
+			log.Warning("initializing legacy http provider. Move `[sinks.http] to `[sinks.http.default]`")
+			log.Warning("only a single sink provider is supported with legacy configuration")
+			httpConf := ko.Cut("http")
+
+			options := provider.ParseHTTPOpts("legacy", httpConf)
+			options.Log = log
+
+			var http *provider.HTTPManager
+			http, err = provider.NewHTTP(options)
+			if err != nil {
+				err = fmt.Errorf("error initializing legacy provider: %w", err)
+				return
+			}
+
+			providers = append(providers, http)
+
+			// NOTE: does not parse any additional providers. To use multiple providers one must migrate.
+			return
+		}
+
+		for _, httpProvider := range ko.MapKeys("http") {
+			log.Debugf("initializing http provider %s", httpProvider)
+			httpConf := ko.Cut("http." + httpProvider)
+
+			options := provider.ParseHTTPOpts(httpProvider, httpConf)
+			options.Log = log
+
+			var http *provider.HTTPManager
+			http, err = provider.NewHTTP(options)
+			if err != nil {
+				err = fmt.Errorf("error initializing provider %s: %w", httpProvider, err)
+				return
+			}
+
+			providers = append(providers, http)
+		}
 	}
 
-	sink := sink.New([]provider.Provider{http}, sink.Opts{
-		BatchWorkers:     ko.Int("sinks.batch.workers"),
-		BatchQueueSize:   ko.Int("sinks.batch.queue_size"),
-		BatchIdleTimeout: ko.Duration("sinks.batch.idle_timeout"),
-		BatchEventsCount: ko.Int("sinks.batch.events_count"),
+	return
+}
+
+func initSink(ko *koanf.Koanf, log *logrus.Logger) sink.Sink {
+	providers, err := initProviders(ko.Cut("sinks"), log)
+	if err != nil {
+		log.WithError(err).Fatal("error initializing providers")
+	}
+
+	var sinkConfig = ko.Cut("sinks")
+	if sinkConfig.Exists("batch") {
+		// Use legacy batch config
+		log.Warning("using legacy sink batch config. Move `[sinks.batch]` under `[sinks]`")
+		sinkConfig = ko.Cut("batch")
+	}
+	sink := sink.New(providers, sink.Opts{
+		BatchWorkers:     sinkConfig.Int("workers"),
+		BatchQueueSize:   sinkConfig.Int("queue_size"),
+		BatchIdleTimeout: sinkConfig.Duration("idle_timeout"),
+		BatchEventsCount: sinkConfig.Int("events_count"),
 		Log:              log,
 	})
 	if err != nil {
