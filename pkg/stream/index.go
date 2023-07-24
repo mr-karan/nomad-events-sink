@@ -33,14 +33,14 @@ func (s *Stream) InitIndex(ctx context.Context) error {
 
 	// If the file doesn't exist, then create a new one with initial state.
 	if !ok {
-		s.log.debugf("comitting a new index file to: %s", dir)
+		s.log.Debug("comitting a new index file to", "directory", dir)
 		err = s.commitIndex(indexPath)
 		if err != nil {
 			return err
 		}
 	} else {
 		// Else read and load it to the map.
-		s.log.debugf("reading existing index file: %s", indexPath)
+		s.log.Debug("reading existing index file", "path", indexPath)
 		err = s.readIndex(indexPath)
 		if err != nil {
 			return err
@@ -58,7 +58,7 @@ func (s *Stream) commitIndex(path string) error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.log.debugf("committing index file: %s", path)
+	s.log.Debug("committing index file", "path", path)
 
 	jsonIndex, err := json.Marshal(s.eventIndex)
 	if err != nil {
@@ -75,7 +75,7 @@ func (s *Stream) commitIndex(path string) error {
 // readIndex reads index file from disk and loads it
 // to the map.
 func (s *Stream) readIndex(path string) error {
-	s.log.debugf("reading index file: %s", path)
+	s.log.Debug("reading index file", "path", path)
 
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -100,12 +100,12 @@ func (s *Stream) commitPeriodically(ctx context.Context, commitInterval time.Dur
 		commitTicker = time.NewTicker(commitInterval).C
 	)
 
-	s.log.debugf("starting background worker to commit index with frequency: %s", commitInterval)
+	s.log.Debug("starting background worker to commit index", "frequency", commitInterval)
 	for range commitTicker {
 		<-commitTicker
 		err := s.commitIndex(getIndexPath(s.dataDir))
 		if err != nil {
-			s.log.errorf("error committing index file: %v", err)
+			s.log.Error("error committing index file", "error", err)
 		}
 	}
 }

@@ -7,11 +7,11 @@ import (
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/mr-karan/nomad-events-sink/internal/sinks/provider"
-	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
 type Worker struct {
-	log              *logrus.Logger
+	log              *slog.Logger
 	batch            []api.Event
 	providers        []provider.Provider
 	batchIdleTimeout time.Duration
@@ -76,15 +76,15 @@ func (w *Worker) flush(batch []api.Event) {
 
 	data, err := prepareJSON(batch)
 	if err != nil {
-		w.log.WithField("batch_len", len(batch)).WithError(err).Error("error while json marshall")
+		w.log.Error("error while json marshall", "error", err, "batch_len", len(batch))
 	}
 
-	w.log.WithField("batch_len", len(batch)).Info("pushing events to providers")
+	w.log.Info("pushing events to providers", "batch_len", len(batch))
 	for _, prov := range w.providers {
 		err = prov.Push(data)
 		if err != nil {
 			// TODO: Handle the error better.
-			w.log.WithError(err).Error("error while pushing to provider")
+			w.log.Error("error while pushing to provider", "error", err)
 		}
 	}
 }

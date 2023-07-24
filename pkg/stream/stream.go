@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/hashicorp/nomad/api"
+	"golang.org/x/exp/slog"
 )
 
 // Stream is a wrapper to interact with Nomad API.
 type Stream struct {
 	sync.RWMutex
-	log            *logger
+	log            *slog.Logger
 	eventIndex     map[string]uint64
 	dataDir        string
 	commitInterval time.Duration
@@ -32,7 +33,7 @@ type Meta struct {
 type CallbackFunc func(api.Event, Meta)
 
 // New initialises a Stream object.
-func New(dir string, commitInterval time.Duration, cb CallbackFunc, verbose bool) (*Stream, error) {
+func New(dir string, commitInterval time.Duration, cb CallbackFunc, log *slog.Logger) (*Stream, error) {
 	// Initialise a Nomad API client with default config.
 	client, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
@@ -45,7 +46,7 @@ func New(dir string, commitInterval time.Duration, cb CallbackFunc, verbose bool
 	}
 
 	return &Stream{
-		log:            initLogger(verbose),
+		log:            log,
 		Client:         client,
 		dataDir:        dir,
 		eventIndex:     initEventIndex(),
@@ -83,14 +84,14 @@ func (s *Stream) Subscribe(ctx context.Context, topic string, maxReconnectAttemp
 			}
 			// Else try connecting to stream again.
 			attempt++
-			s.log.errorf("attempting to reconnect to stream on topic: %s, attempt: %d, remaining: %d", topic, attempt, maxReconnectAttempts)
+			s.log.Error("attempting to reconnect to stream on topic", "error", err, "topic", topic, "attempt", attempt, "max_attempts", maxReconnectAttempts)
 			continue
 		}
 
 		// Once the channel is initialised, start reading events.
 		err = s.handleEvents(ctx, eventCh)
 		if err != nil {
-			s.log.errorf("error handling events: %v", err)
+			s.log.Error("error handling events", "error", err)
 			continue
 		}
 		return nil
@@ -108,12 +109,12 @@ func (s *Stream) initStreamChannel(ctx context.Context, topic string) (<-chan *a
 	index := s.eventIndex[topic]
 	s.RUnlock()
 
-	s.log.debugf("subscribing to stream on topic %s from index %d", api.Topic(topic), index)
+	s.log.Debug("subscribing to stream", "topic", api.Topic(topic), "index", index)
 
 	events := s.Client.EventStream()
 	eventCh, err := events.Stream(ctx, topics, index, &api.QueryOptions{})
 	if err != nil {
-		s.log.errorf("error initialising stream client: %v", err)
+		s.log.Error("error initialising stream client", "error", err)
 		return nil, err
 	}
 	return eventCh, nil
@@ -129,15 +130,15 @@ func (s *Stream) handleEvents(ctx context.Context, eventCh <-chan *api.Events) e
 	for {
 		select {
 		case <-ctx.Done():
-			s.log.debugf("cancellation signal received; comitting index file")
+			s.log.Debug("cancellation signal received; comitting index file")
 			err := s.commitIndex(getIndexPath(s.dataDir))
 			if err != nil {
-				s.log.errorf("error committing index file: %v", err)
+				s.log.Error("error committing index file", "error", err)
 			}
 			return nil
 		case event := <-eventCh:
 			if event.Err != nil {
-				s.log.errorf("error consuming event: %v", err)
+				s.log.Error("error consuming event", "error", event.Err)
 				return event.Err
 			}
 

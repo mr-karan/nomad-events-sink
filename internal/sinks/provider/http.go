@@ -6,18 +6,18 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
-// HTTPManager represents the various methods for interacting with Pigeon.
+// HTTPManager represents the various methods for interacting with HTTP.
 type HTTPManager struct {
 	client  http.Client
 	rootURL string
-	log     *logrus.Logger
+	log     *slog.Logger
 }
 
 type HTTPOpts struct {
-	Log            *logrus.Logger
+	Log            *slog.Logger
 	RootURL        string
 	Timeout        time.Duration
 	MaxConnections int
@@ -56,7 +56,7 @@ func NewHTTP(opts HTTPOpts) (*HTTPManager, error) {
 
 	// Ping upstream if healthcheck is enabled.
 	if opts.HealthCheckEnabled {
-		httpMgr.log.WithField("url", opts.HealthcheckURL).Info("attempting to ping provider")
+		httpMgr.log.Info("attempting to ping provider", "url", opts.HealthcheckURL)
 		return httpMgr, httpMgr.Ping(opts.HealthcheckURL, opts.HealthCheckStatus)
 	}
 
@@ -67,14 +67,14 @@ func NewHTTP(opts HTTPOpts) (*HTTPManager, error) {
 func (m *HTTPManager) Push(data []byte) error {
 	req, err := http.NewRequest("POST", m.rootURL, bytes.NewBuffer(data))
 	if err != nil {
-		m.log.WithError(err).Error("error preparing http request")
+		m.log.Error("error preparing http request", "error", err)
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := m.client.Do(req)
 	if err != nil {
-		m.log.WithError(err).Error("error sending http request")
+		m.log.Error("error sending http request", "error", err)
 		return err
 	}
 	defer resp.Body.Close()
